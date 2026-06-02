@@ -1,10 +1,8 @@
-# create_tables.py
+from app.database import Base, engine
 
-from app.database import engine, Base
-from app.models.listing import Listing
-
-# Import models so SQLAlchemy knows about them
 from app.models.user import User
+from app.models.listing import Listing
+from app.models.booking import Booking
 
 Base.metadata.create_all(bind=engine)
 
