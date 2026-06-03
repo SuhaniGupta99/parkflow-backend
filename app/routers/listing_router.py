@@ -43,6 +43,11 @@ def create_new_listing(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
+    if current_user.role != "HOST":
+        raise HTTPException(
+            status_code=403,
+            detail="Only hosts can create listings"
+        )
 
     new_listing = Listing(
         owner_id=current_user.id,
@@ -84,6 +89,11 @@ def get_current_user_listings(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
+    if current_user.role != "HOST":
+        raise HTTPException(
+            status_code=403,
+            detail="Only hosts have listings"
+        )
 
     return get_my_listings(
         db,

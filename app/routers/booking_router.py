@@ -14,7 +14,6 @@ from app.schemas.booking import (
     BookingCreate,
     BookingResponse
 )
-
 from app.models.booking import Booking
 from app.models.enums import BookingStatus
 
@@ -22,9 +21,10 @@ from app.repositories.booking_repository import (
     create_booking,
     get_my_bookings,
     get_booking_by_id,
-    check_in_booking,
-    request_exit_booking,
-    confirm_exit_booking
+    confirm_exit_booking,
+    approve_booking,
+    reject_booking,
+    get_pending_bookings_for_host
 )
 
 from app.repositories.listing_repository import (
@@ -49,6 +49,11 @@ def create_new_booking(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
+    if current_user.role != "CUSTOMER":
+        raise HTTPException(
+            status_code=403,
+            detail="Only customers can create bookings"
+        )
 
     listing = get_listing_by_id(
         db,
@@ -83,7 +88,6 @@ def create_new_booking(
         listing.hourly_rate
     )
 
-    listing.available_spaces -= 1
 
 
     booking = Booking(
@@ -92,7 +96,7 @@ def create_new_booking(
         start_time=booking_data.start_time,
         end_time=booking_data.end_time,
         total_cost=total_cost,
-        status=BookingStatus.CONFIRMED.value
+        status=BookingStatus.PENDING.value
     )
 
     db.add(booking)
@@ -111,22 +115,44 @@ def get_current_user_bookings(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
+    if current_user.role != "CUSTOMER":
+        raise HTTPException(
+            status_code=403,
+            detail="Only customers have bookings"
+        )
 
     return get_my_bookings(
         db,
         current_user.id
     )
 
-
-@router.post(
-    "/{booking_id}/check-in",
-    response_model=BookingResponse
-)
-
-def check_in(
-    booking_id: int,
-    db: Session = Depends(get_db)
+@router.get("/pending")
+def get_pending_requests(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
 ):
+    if current_user.role != "HOST":
+        raise HTTPException(
+            status_code=403,
+            detail="Only hosts can view booking requests"
+        )
+
+    return get_pending_bookings_for_host(
+        db,
+        current_user.id
+    )
+@router.post("/{booking_id}/approve")
+def approve_booking_request(
+    booking_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    if current_user.role != "HOST":
+        raise HTTPException(
+            status_code=403,
+            detail="Only hosts can approve bookings"
+        )
+
     booking = get_booking_by_id(
         db,
         booking_id
@@ -138,25 +164,49 @@ def check_in(
             detail="Booking not found"
         )
 
-    if booking.status != BookingStatus.CONFIRMED:
+    listing = get_listing_by_id(
+        db,
+        booking.listing_id
+    )
+
+    if listing.owner_id != current_user.id:
         raise HTTPException(
-            status_code=400,
-            detail="Booking must be CONFIRMED"
+            status_code=403,
+            detail="Not authorized"
         )
 
-    return check_in_booking(
+    if booking.status != BookingStatus.PENDING:
+        raise HTTPException(
+            status_code=400,
+            detail="Booking must be PENDING"
+        )
+    if listing.available_spaces <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="No spaces available"
+        )
+    
+    listing.available_spaces -= 1
+    
+    db.commit()
+    
+    return approve_booking(
         db,
         booking
     )
 
-@router.post(
-    "/{booking_id}/request-exit",
-    response_model=BookingResponse
-)
-def request_exit(
+@router.post("/{booking_id}/reject")
+def reject_booking_request(
     booking_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
 ):
+    if current_user.role != "HOST":
+        raise HTTPException(
+            status_code=403,
+            detail="Only hosts can reject bookings"
+        )
+
     booking = get_booking_by_id(
         db,
         booking_id
@@ -168,16 +218,34 @@ def request_exit(
             detail="Booking not found"
         )
 
-    if booking.status != BookingStatus.ACTIVE:
+    listing = get_listing_by_id(
+        db,
+        booking.listing_id
+    )
+
+    if not listing:
         raise HTTPException(
-            status_code=400,
-            detail="Booking must be ACTIVE"
+            status_code=404,
+            detail="Listing not found"
         )
 
-    return request_exit_booking(
+    if listing.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized"
+        )
+
+    if booking.status != BookingStatus.PENDING:
+        raise HTTPException(
+            status_code=400,
+            detail="Booking must be PENDING"
+        )
+
+    return reject_booking(
         db,
         booking
     )
+
 
 @router.post(
     "/{booking_id}/confirm-exit",
@@ -185,8 +253,15 @@ def request_exit(
 )
 def confirm_exit(
     booking_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
 ):
+    if current_user.role != "HOST":
+        raise HTTPException(
+            status_code=403,
+            detail="Only hosts can confirm exits"
+        )
+    
     booking = get_booking_by_id(
         db,
         booking_id
@@ -208,6 +283,17 @@ def confirm_exit(
         db,
         booking.listing_id
     )
+    if not listing:
+        raise HTTPException(
+            status_code=404,
+            detail="Listing not found"
+            )
+    
+    if listing.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized"
+        )
 
     duration = (
         datetime.utcnow()

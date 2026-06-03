@@ -38,6 +38,11 @@ def register(
             status_code=400,
             detail="Email already registered"
         )
+    if request.role not in ["HOST", "CUSTOMER"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid role"
+        )
 
     hashed_password = hash_password(
         request.password

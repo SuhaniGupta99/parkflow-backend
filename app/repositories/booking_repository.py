@@ -80,3 +80,44 @@ def get_booking_by_id(
         )
         .first()
     )
+
+def approve_booking(
+    db: Session,
+    booking: Booking
+):
+    booking.status = "CONFIRMED"
+
+    db.commit()
+    db.refresh(booking)
+
+    return booking
+
+def reject_booking(
+    db: Session,
+    booking: Booking
+):
+    booking.status = "REJECTED"
+
+    db.commit()
+    db.refresh(booking)
+
+    return booking
+
+def get_pending_bookings_for_host(
+    db: Session,
+    owner_id: int
+):
+    from app.models.listing import Listing
+
+    return (
+        db.query(Booking)
+        .join(
+            Listing,
+            Booking.listing_id == Listing.id
+        )
+        .filter(
+            Listing.owner_id == owner_id,
+            Booking.status == "PENDING"
+        )
+        .all()
+    )

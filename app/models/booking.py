@@ -49,7 +49,7 @@ class Booking(Base):
     total_cost = Column(Float)
 
     status = Column(
-        Enum(BookingStatus),
-        default=BookingStatus.CONFIRMED
+    Enum(BookingStatus),
+    default=BookingStatus.PENDING
     )
 
