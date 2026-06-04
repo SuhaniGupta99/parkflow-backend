@@ -38,6 +38,23 @@ class ListingResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class NearbyListingResponse(BaseModel):
+    id: int
+
+    title: str
+
+    address: str
+
+    latitude: float
+
+    longitude: float
+
+    hourly_rate: float
+
+    available_spaces: int
+
+    distance_km: float
+    
 class ListingUpdate(BaseModel):
     title: str | None = None
 

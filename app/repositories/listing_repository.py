@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.models.listing import Listing
-
+from geopy.distance import geodesic
 
 def create_listing(
     db: Session,
@@ -56,3 +56,46 @@ def delete_listing(
 ):
     db.delete(listing)
     db.commit()
+
+def get_nearby_listings(
+    db: Session,
+    latitude: float,
+    longitude: float,
+    radius_km: float
+):
+    listings = (
+        db.query(Listing)
+        .filter(
+            Listing.is_active == True,
+            Listing.available_spaces > 0
+        )
+        .all()
+    )
+
+    nearby = []
+
+    for listing in listings:
+
+        distance = geodesic(
+            (latitude, longitude),
+            (listing.latitude, listing.longitude)
+        ).km
+
+        if distance <= radius_km:
+
+            nearby.append({
+                "id": listing.id,
+                "title": listing.title,
+                "address": listing.address,
+                "latitude": listing.latitude,
+                "longitude": listing.longitude,
+                "hourly_rate": listing.hourly_rate,
+                "available_spaces": listing.available_spaces,
+                "distance_km": round(distance, 2)
+            })
+
+    nearby.sort(
+        key=lambda x: x["distance_km"]
+    )
+
+    return nearby

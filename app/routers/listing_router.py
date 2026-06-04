@@ -10,12 +10,14 @@ from app.repositories.listing_repository import (
     get_listing_by_id,
     get_my_listings,
     update_listing,
-    delete_listing
+    delete_listing,
+    get_nearby_listings
 )
 from app.schemas.listing import (
     ListingCreate,
     ListingResponse,
-    ListingUpdate
+    ListingUpdate,
+    NearbyListingResponse
 )
 
 
@@ -98,6 +100,23 @@ def get_current_user_listings(
     return get_my_listings(
         db,
         current_user.id
+    )
+
+@router.get(
+    "/nearby",
+    response_model=list[NearbyListingResponse]
+)
+def nearby_listings(
+    latitude: float,
+    longitude: float,
+    radius_km: float = 5,
+    db: Session = Depends(get_db)
+):
+    return get_nearby_listings(
+        db,
+        latitude,
+        longitude,
+        radius_km
     )
 
 
