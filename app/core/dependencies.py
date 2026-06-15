@@ -13,7 +13,6 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ):
-
     token = credentials.credentials
 
     payload = verify_access_token(token)
@@ -28,6 +27,8 @@ def get_current_user(
         db,
         payload["user_id"]
     )
+
+    print("USER:", user)
 
     if not user:
         raise HTTPException(

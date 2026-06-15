@@ -68,9 +68,12 @@ def generate_qr(
     )
 
     return {
-        "listing_id": listing_id,
-        "entry_qr_path": entry_qr,
-        "exit_qr_path": exit_qr
+    "listing_id": listing_id,
+    "entry_qr_path":
+        f"/qr_codes/entry_listing_{listing_id}.png",
+
+    "exit_qr_path":
+        f"/qr_codes/exit_listing_{listing_id}.png"
     }
 
 

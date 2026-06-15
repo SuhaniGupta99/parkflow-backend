@@ -24,7 +24,8 @@ from app.repositories.booking_repository import (
     confirm_exit_booking,
     approve_booking,
     reject_booking,
-    get_pending_bookings_for_host
+    get_pending_bookings_for_host,
+    get_exit_requests_for_host
 )
 
 from app.repositories.listing_repository import (
@@ -295,17 +296,34 @@ def confirm_exit(
             detail="Not authorized"
         )
 
-    duration = (
-        datetime.utcnow()
-        - booking.actual_start_time
-    )
-
-    hours = duration.total_seconds() / 3600
-
-    final_cost = (
-        hours *
+    actual_exit_time = datetime.utcnow()
+    
+    booked_hours = (
+        booking.end_time -
+        booking.start_time
+    ).total_seconds() / 3600
+    
+    booked_cost = (
+        booked_hours *
         listing.hourly_rate
     )
+    
+    overstay_hours = max(
+        0,
+        (
+            actual_exit_time -
+            booking.end_time
+        ).total_seconds() / 3600
+    )
+    
+    extra_cost = (
+        overstay_hours *
+        listing.hourly_rate
+    )
+    final_cost = (
+        booked_cost +
+        extra_cost
+        )
 
     listing.available_spaces += 1
 
@@ -315,4 +333,20 @@ def confirm_exit(
         db,
         booking,
         final_cost
+    )
+
+@router.get("/exit-requests")
+def get_exit_requests(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    if current_user.role != "HOST":
+        raise HTTPException(
+            status_code=403,
+            detail="Only hosts can view exit requests"
+        )
+
+    return get_exit_requests_for_host(
+        db,
+        current_user.id
     )

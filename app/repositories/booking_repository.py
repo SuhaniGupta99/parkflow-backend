@@ -121,3 +121,22 @@ def get_pending_bookings_for_host(
         )
         .all()
     )
+
+def get_exit_requests_for_host(
+    db: Session,
+    owner_id: int
+):
+    from app.models.listing import Listing
+
+    return (
+        db.query(Booking)
+        .join(
+            Listing,
+            Booking.listing_id == Listing.id
+        )
+        .filter(
+            Listing.owner_id == owner_id,
+            Booking.status == "EXIT_REQUESTED"
+        )
+        .all()
+    )
