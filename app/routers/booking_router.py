@@ -1,5 +1,5 @@
 from datetime import datetime
-
+from app.models.vehicle import Vehicle
 from fastapi import (
     APIRouter,
     Depends,
@@ -16,6 +16,7 @@ from app.schemas.booking import (
 )
 from app.models.booking import Booking
 from app.models.enums import BookingStatus
+from fastapi import Body
 
 from app.repositories.booking_repository import (
     create_booking,
@@ -41,12 +42,14 @@ router = APIRouter(
     tags=["Bookings"]
 )
 
+
 @router.post(
     "/",
     response_model=BookingResponse
 )
+
 def create_new_booking(
-    booking_data: BookingCreate,
+    booking_data: BookingCreate = Body(...),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
@@ -65,6 +68,24 @@ def create_new_booking(
         raise HTTPException(
             status_code=404,
             detail="Listing not found"
+        )
+    vehicle = (
+        db.query(Vehicle)
+        .filter(
+            Vehicle.id == booking_data.vehicle_id
+        )
+        .first()
+    )
+    if not vehicle:
+        raise HTTPException(
+            status_code=404,
+            detail="Vehicle not found"
+        )
+    
+    if vehicle.user_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Vehicle does not belong to you"
         )
 
     if listing.available_spaces <= 0:
@@ -94,6 +115,7 @@ def create_new_booking(
     booking = Booking(
         user_id=current_user.id,
         listing_id=listing.id,
+        vehicle_id=vehicle.id,
         start_time=booking_data.start_time,
         end_time=booking_data.end_time,
         total_cost=total_cost,

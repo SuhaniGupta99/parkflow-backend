@@ -1,5 +1,5 @@
 from app.database import Base, engine
-
+from app.models.vehicle import Vehicle
 from app.models.user import User
 from app.models.listing import Listing
 from app.models.booking import Booking

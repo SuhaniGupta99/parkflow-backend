@@ -1,5 +1,5 @@
 # app/models/user.py
-
+from sqlalchemy.orm import relationship
 from sqlalchemy import Column, Integer, String
 from app.database import Base
 from sqlalchemy import Enum
@@ -20,3 +20,5 @@ class User(Base):
     role = Column(Enum(UserRole),nullable=False)
 
     password_hash = Column(String, nullable=False)
+
+    vehicles = relationship("Vehicle", back_populates="user", cascade="all, delete-orphan")

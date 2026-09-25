@@ -5,6 +5,8 @@ from pydantic import BaseModel
 class BookingCreate(BaseModel):
     listing_id: int
 
+    vehicle_id: int
+
     start_time: datetime
 
     end_time: datetime
@@ -16,6 +18,8 @@ class BookingResponse(BaseModel):
     user_id: int
 
     listing_id: int
+
+    vehicle_id: int
 
     start_time: datetime
 

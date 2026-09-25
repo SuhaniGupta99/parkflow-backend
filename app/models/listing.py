@@ -4,8 +4,11 @@ from sqlalchemy import (
     String,
     Float,
     Boolean,
-    ForeignKey
+    ForeignKey,
+    TEXT
 )
+
+from sqlalchemy.dialects.postgresql import ARRAY
 
 from app.database import Base
 
@@ -57,11 +60,22 @@ class Listing(Base):
     )
 
     description = Column(
-        String,
-        nullable=True
+    String,
+    nullable=True
+    )
+    
+    image_url = Column(
+    String,
+    nullable=True
     )
 
+    amenities = Column(
+    ARRAY(TEXT),
+    nullable=True,
+    default=[]
+    )
+    
     is_active = Column(
-        Boolean,
-        default=True
+    Boolean,
+    default=True
     )

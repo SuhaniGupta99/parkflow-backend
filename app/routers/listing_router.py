@@ -1,7 +1,9 @@
 from fastapi import (
     APIRouter,
     Depends,
-    HTTPException
+    HTTPException,
+    UploadFile,
+    File
 )
 from sqlalchemy.orm import Session
 from app.repositories.listing_repository import (
@@ -27,7 +29,8 @@ from app.models.listing import Listing
 
 from app.core.dependencies import get_current_user
 
-
+import os
+import shutil
 
 
 router = APIRouter(
@@ -66,7 +69,11 @@ def create_new_listing(
 
         available_spaces=listing.total_spaces,
 
-        description=listing.description
+        description=listing.description,
+        
+        image_url=listing.image_url,
+
+        amenities=listing.amenities,
     )
 
     return create_listing(
@@ -217,4 +224,58 @@ def remove_listing(
 
     return {
         "message": "Listing deleted successfully"
+    }
+
+@router.post("/{listing_id}/image")
+def upload_listing_image(
+    listing_id: int,
+    image: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+
+    listing = get_listing_by_id(
+        db,
+        listing_id
+    )
+
+    if not listing:
+        raise HTTPException(
+            status_code=404,
+            detail="Listing not found"
+        )
+
+    if listing.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized"
+        )
+
+    extension = image.filename.split(".")[-1]
+
+    filename = (
+        f"listing_{listing_id}.{extension}"
+    )
+
+    filepath = os.path.join(
+        "uploads",
+        "listings",
+        filename
+    )
+
+    with open(filepath, "wb") as buffer:
+        shutil.copyfileobj(
+            image.file,
+            buffer
+        )
+
+    listing.image_url = (
+        f"/uploads/listings/{filename}"
+    )
+
+    db.commit()
+    db.refresh(listing)
+
+    return {
+        "image_url": listing.image_url
     }

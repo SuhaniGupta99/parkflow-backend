@@ -27,6 +27,11 @@ class Booking(Base):
         Integer,
         ForeignKey("listings.id")
     )
+    vehicle_id = Column(
+        Integer,
+        ForeignKey("vehicles.id"),
+        nullable=False
+    )
 
     start_time = Column(DateTime)
     end_time = Column(DateTime)
